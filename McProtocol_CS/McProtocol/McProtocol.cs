@@ -53,7 +53,7 @@ namespace Nc
           , CT
           , CM
           , A
-          , MAX
+          , Max
         }
 
         // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -84,31 +84,31 @@ namespace Nc
             public int PortNumber { get; set; }    // ポート番号
             // ====================================================================================
             // コンストラクタ
-            public McProtocolApp(string iHostName, int iPortNumber)
+            protected McProtocolApp(string iHostName, int iPortNumber)
             {
-                this.CommandFrame = McFrame.MC3E;
-                this.HostName = iHostName;
-                this.PortNumber = iPortNumber;
+                CommandFrame = McFrame.MC3E;
+                HostName = iHostName;
+                PortNumber = iPortNumber;
             }
 
             // ====================================================================================
             // 後処理
             public void Dispose()
             {
-                this.Close();
+                Close();
             }
 
             // ====================================================================================
             public int Open()
             {
-                this.DoConnect();
-                this.Command = new McCommand(this.CommandFrame);
+                DoConnect();
+                Command = new McCommand(CommandFrame);
                 return 0;
             }
             // ====================================================================================
             public int Close()
             {
-                this.DoDisconnect();
+                DoDisconnect();
                 return 0;
             }
             // ====================================================================================
@@ -116,23 +116,25 @@ namespace Nc
             {
                 PlcDeviceType type;
                 int addr;
-                McProtocolTcp.GetDeviceCode(iDeviceName, out type, out addr);
+                GetDeviceCode(iDeviceName, out type, out addr);
                 return SetBitDevice(type, addr, iSize, iData);
             }
             // ====================================================================================
             public int SetBitDevice(PlcDeviceType iType, int iAddress, int iSize, int[] iData)
             {
-                PlcDeviceType type = iType;
-                int addr = iAddress;
-                List<byte> data = new List<byte>(6);
-                data.Add((byte)addr);
-                data.Add((byte)(addr >> 8));
-                data.Add((byte)(addr >> 16));
-                data.Add((byte)type);
-                data.Add((byte)iSize);
-                data.Add((byte)(iSize >> 8));
-                byte d = (byte)iData[0];
-                int i = 0;
+                var type = iType;
+                var addr = iAddress;
+                var data = new List<byte>(6)
+                    {
+                        (byte) addr
+                      , (byte) (addr >> 8)
+                      , (byte) (addr >> 16)
+                      , (byte) type
+                      , (byte) iSize
+                      , (byte) (iSize >> 8)
+                    };
+                var d = (byte)iData[0];
+                var i = 0;
                 while (i < iData.Length)
                 {
                     if (i % 2 == 0)
@@ -151,9 +153,9 @@ namespace Nc
                 {
                     data.Add(d);
                 }
-                byte[] sdCommand = this.Command.SetCommand(0x1401, 0x0001, data.ToArray());
-                byte[] rtResponse = this.Execute(sdCommand);
-                int rtCode = this.Command.SetResponse(rtResponse);
+                byte[] sdCommand = Command.SetCommand(0x1401, 0x0001, data.ToArray());
+                byte[] rtResponse = TryExecution(sdCommand);
+                int rtCode = Command.SetResponse(rtResponse);
                 return rtCode;
             }
             // ====================================================================================
@@ -161,7 +163,7 @@ namespace Nc
             {
                 PlcDeviceType type;
                 int addr;
-                McProtocolTcp.GetDeviceCode(iDeviceName, out type, out addr);
+                GetDeviceCode(iDeviceName, out type, out addr);
                 return GetBitDevice(type, addr, iSize, oData);
             }
             // ====================================================================================
@@ -169,26 +171,28 @@ namespace Nc
             {
                 PlcDeviceType type = iType;
                 int addr = iAddress;
-                List<byte> data = new List<byte>(6);
-                data.Add((byte)addr);
-                data.Add((byte)(addr >> 8));
-                data.Add((byte)(addr >> 16));
-                data.Add((byte)type);
-                data.Add((byte)iSize);
-                data.Add((byte)(iSize >> 8));
-                byte[] sdCommand = this.Command.SetCommand(0x0401, 0x0001, data.ToArray());
-                byte[] rtResponse = this.Execute(sdCommand);
-                int rtCode = this.Command.SetResponse(rtResponse);
-                byte[] rtData = this.Command.Response;
+                var data = new List<byte>(6)
+                    {
+                        (byte) addr
+                      , (byte) (addr >> 8)
+                      , (byte) (addr >> 16)
+                      , (byte) type
+                      , (byte) iSize
+                      , (byte) (iSize >> 8)
+                    };
+                byte[] sdCommand = Command.SetCommand(0x0401, 0x0001, data.ToArray());
+                byte[] rtResponse = TryExecution(sdCommand);
+                int rtCode = Command.SetResponse(rtResponse);
+                byte[] rtData = Command.Response;
                 for (int i = 0; i < iSize; ++i)
                 {
                     if (i % 2 == 0)
                     {
-                        oData[i] = (rtCode == 0) ? ((rtData[(int)(i / 2)] >> 4) & 0x01) : 0;
+                        oData[i] = (rtCode == 0) ? ((rtData[i / 2] >> 4) & 0x01) : 0;
                     }
                     else
                     {
-                        oData[i] = (rtCode == 0) ? (rtData[(int)(i / 2)] & 0x01) : 0;
+                        oData[i] = (rtCode == 0) ? (rtData[i / 2] & 0x01) : 0;
                     }
                 }
                 return rtCode;
@@ -198,7 +202,7 @@ namespace Nc
             {
                 PlcDeviceType type;
                 int addr;
-                McProtocolTcp.GetDeviceCode(iDeviceName, out type, out addr);
+                GetDeviceCode(iDeviceName, out type, out addr);
                 return WriteDeviceBlock(type, addr, iSize, iData);
             }
             // ====================================================================================
@@ -206,21 +210,23 @@ namespace Nc
             {
                 PlcDeviceType type = iType;
                 int addr = iAddress;
-                List<byte> data = new List<byte>(6);
-                data.Add((byte)addr);
-                data.Add((byte)(addr >> 8));
-                data.Add((byte)(addr >> 16));
-                data.Add((byte)type);
-                data.Add((byte)iSize);
-                data.Add((byte)(iSize >> 8));
-                for (int i = 0; i < iData.Length; ++i)
+                var data = new List<byte>(6)
+                    {
+                        (byte) addr
+                      , (byte) (addr >> 8)
+                      , (byte) (addr >> 16)
+                      , (byte) type
+                      , (byte) iSize
+                      , (byte) (iSize >> 8)
+                    };
+                foreach (int t in iData)
                 {
-                    data.Add((byte)iData[i]);
-                    data.Add((byte)(iData[i] >> 8));
+                    data.Add((byte)t);
+                    data.Add((byte)(t >> 8));
                 }
-                byte[] sdCommand = this.Command.SetCommand(0x1401, 0x0000, data.ToArray());
-                byte[] rtResponse = this.Execute(sdCommand);
-                int rtCode = this.Command.SetResponse(rtResponse);
+                byte[] sdCommand = Command.SetCommand(0x1401, 0x0000, data.ToArray());
+                byte[] rtResponse = TryExecution(sdCommand);
+                int rtCode = Command.SetResponse(rtResponse);
                 return rtCode;
             }
             // ====================================================================================
@@ -228,7 +234,7 @@ namespace Nc
             {
                 PlcDeviceType type;
                 int addr;
-                McProtocolTcp.GetDeviceCode(iDeviceName, out type, out addr);
+                GetDeviceCode(iDeviceName, out type, out addr);
                 return ReadDeviceBlock(type, addr, iSize, oData);
             }
             // ====================================================================================
@@ -236,17 +242,19 @@ namespace Nc
             {
                 PlcDeviceType type = iType;
                 int addr = iAddress;
-                List<byte> data = new List<byte>(6);
-                data.Add((byte)addr);
-                data.Add((byte)(addr >> 8));
-                data.Add((byte)(addr >> 16));
-                data.Add((byte)type);
-                data.Add((byte)iSize);
-                data.Add((byte)(iSize >> 8));
-                byte[] sdCommand = this.Command.SetCommand(0x0401, 0x0000, data.ToArray());
-                byte[] rtResponse = this.Execute(sdCommand);
-                int rtCode = this.Command.SetResponse(rtResponse);
-                byte[] rtData = this.Command.Response;
+                var data = new List<byte>(6)
+                    {
+                        (byte) addr
+                      , (byte) (addr >> 8)
+                      , (byte) (addr >> 16)
+                      , (byte) type
+                      , (byte) iSize
+                      , (byte) (iSize >> 8)
+                    };
+                byte[] sdCommand = Command.SetCommand(0x0401, 0x0000, data.ToArray());
+                byte[] rtResponse = TryExecution(sdCommand);
+                int rtCode = Command.SetResponse(rtResponse);
+                byte[] rtData = Command.Response;
                 for (int i = 0; i < iSize; ++i)
                 {
                     oData[i] = (rtCode == 0) ? BitConverter.ToInt16(rtData, i * 2) : 0;
@@ -258,7 +266,7 @@ namespace Nc
             {
                 PlcDeviceType type;
                 int addr;
-                McProtocolTcp.GetDeviceCode(iDeviceName, out type, out addr);
+                GetDeviceCode(iDeviceName, out type, out addr);
                 return SetDevice(type, addr, iData);
             }
             // ====================================================================================
@@ -266,18 +274,20 @@ namespace Nc
             {
                 PlcDeviceType type = iType;
                 int addr = iAddress;
-                List<byte> data = new List<byte>(6);
-                data.Add((byte)addr);
-                data.Add((byte)(addr >> 8));
-                data.Add((byte)(addr >> 16));
-                data.Add((byte)type);
-                data.Add(0x01);
-                data.Add(0x00);
-                data.Add((byte)iData);
-                data.Add((byte)(iData >> 8));
-                byte[] sdCommand = this.Command.SetCommand(0x1401, 0x0000, data.ToArray());
-                byte[] rtResponse = this.Execute(sdCommand);
-                int rtCode = this.Command.SetResponse(rtResponse);
+                var data = new List<byte>(6)
+                    {
+                        (byte) addr
+                      , (byte) (addr >> 8)
+                      , (byte) (addr >> 16)
+                      , (byte) type
+                      , 0x01
+                      , 0x00
+                      , (byte) iData
+                      , (byte) (iData >> 8)
+                    };
+                byte[] sdCommand = Command.SetCommand(0x1401, 0x0000, data.ToArray());
+                byte[] rtResponse = TryExecution(sdCommand);
+                int rtCode = Command.SetResponse(rtResponse);
                 return rtCode;
             }
             // ====================================================================================
@@ -285,7 +295,7 @@ namespace Nc
             {
                 PlcDeviceType type;
                 int addr;
-                McProtocolTcp.GetDeviceCode(iDeviceName, out type, out addr);
+                GetDeviceCode(iDeviceName, out type, out addr);
                 return GetDevice(type, addr, out oData);
             }
             // ====================================================================================
@@ -293,23 +303,25 @@ namespace Nc
             {
                 PlcDeviceType type = iType;
                 int addr = iAddress;
-                List<byte> data = new List<byte>(6);
-                data.Add((byte)addr);
-                data.Add((byte)(addr >> 8));
-                data.Add((byte)(addr >> 16));
-                data.Add((byte)type);
-                data.Add(0x01);
-                data.Add(0x00);
-                byte[] sdCommand = this.Command.SetCommand(0x0401, 0x0000, data.ToArray());
-                byte[] rtResponse = this.Execute(sdCommand);
-                int rtCode = this.Command.SetResponse(rtResponse);
+                var data = new List<byte>(6)
+                    {
+                        (byte) addr
+                      , (byte) (addr >> 8)
+                      , (byte) (addr >> 16)
+                      , (byte) type
+                      , 0x01
+                      , 0x00
+                    };
+                byte[] sdCommand = Command.SetCommand(0x0401, 0x0000, data.ToArray());
+                byte[] rtResponse = TryExecution(sdCommand);
+                int rtCode = Command.SetResponse(rtResponse);
                 if (0 < rtCode)
                 {
                     oData = 0;
                 }
                 else
                 {
-                    byte[] rtData = this.Command.Response;
+                    byte[] rtData = Command.Response;
                     oData = BitConverter.ToInt16(rtData, 0);
                 }
                 return rtCode;
@@ -317,7 +329,7 @@ namespace Nc
             // ====================================================================================
             //public int GetCpuType(out string oCpuName, out int oCpuType)
             //{
-            //    int rtCode = this.Command.Execute(0x0101, 0x0000, new byte[0]);
+            //    int rtCode = Command.Execute(0x0101, 0x0000, new byte[0]);
             //    oCpuName = "dummy";
             //    oCpuType = 0;
             //    return rtCode;
@@ -358,7 +370,7 @@ namespace Nc
                        (s == "CT") ? PlcDeviceType.CT :
                        (s == "CM") ? PlcDeviceType.CM :
                        (s == "A") ? PlcDeviceType.A :
-                                     PlcDeviceType.MAX;
+                                     PlcDeviceType.Max;
             }
 
             // ====================================================================================
@@ -385,11 +397,10 @@ namespace Nc
             public static void GetDeviceCode(string iDeviceName, out PlcDeviceType oType, out int oAddress)
             {
                 string s = iDeviceName.ToUpper();
-                string strType = "";
-                string strAddress = "";
+                string strAddress;
 
                 // 1文字取り出す
-                strType = s.Substring(0, 1);
+                string strType = s.Substring(0, 1);
                 switch (strType)
                 {
                     case "A":
@@ -409,16 +420,9 @@ namespace Nc
                     case "Z":
                         // もう1文字取り出す
                         strType = s.Substring(0, 2);
-                        if (strType.Equals("ZR"))
-                        {
-                            // ファイルレジスタの場合
-                            strAddress = s.Substring(2);
-                        }
-                        else
-                        {
-                            // インデックスレジスタの場合
-                            strAddress = s.Substring(1);
-                        }
+                        // ファイルレジスタの場合     : 2
+                        // インデックスレジスタの場合 : 1
+                        strAddress = s.Substring(strType.Equals("ZR") ? 2 : 1);
                         break;
                     case "C":
                         // もう1文字取り出す
@@ -469,91 +473,114 @@ namespace Nc
                         throw new Exception("Invalid format.");
                 }
 
-                oType = McProtocolTcp.GetDeviceType(strType);
-                oAddress = McProtocolTcp.IsHexDevice(oType) ? Convert.ToInt32(strAddress, McProtocolTcp.BLOCK_SIZE) :
-                                                              Convert.ToInt32(strAddress);
+                oType = GetDeviceType(strType);
+                oAddress = IsHexDevice(oType) ? Convert.ToInt32(strAddress, BlockSize) :
+                                                Convert.ToInt32(strAddress);
             }
             // &&&&& protected &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
             abstract protected void DoConnect();
             abstract protected void DoDisconnect();
             abstract protected byte[] Execute(byte[] iCommand);
             // &&&&& private &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-            private const int BLOCK_SIZE = 0x0010;
+            private const int BlockSize = 0x0010;
             private McCommand Command { get; set; }
+            // ================================================================================
+            private byte[] TryExecution(byte[] iCommand)
+            {
+                byte[] rtResponse;
+                int tCount = 10;
+                do
+                {
+                    rtResponse = Execute(iCommand);
+                    --tCount;
+                    if (tCount < 0)
+                    {
+                        throw new Exception("PLCから正しい値が取得できません.");
+                    }
+                } while (Command.IsIncorrectResponse(rtResponse));
+                return rtResponse;
+            }
             // ####################################################################################
             // 通信に使用するコマンドを表現するインナークラス
             class McCommand
             {
-                public McFrame FrameType { get; set; }  // フレーム種別
-                public uint SerialNumber { get; set; }  // シリアル番号
-                public uint NetwrokNumber { get; set; } // ネットワーク番号
-                public uint PCNumber { get; set; }      // PC番号
-                public uint IONumber { get; set; }      // 要求先ユニットI/O番号
-                public uint ChannelNumber { get; set; } // 要求先ユニット局番号
-                public uint CpuTimer { get; set; }      // CPU監視タイマ
-                public int ResultCode { get; private set; }     // 終了コード
+                private McFrame FrameType { get; set; }  // フレーム種別
+                private uint SerialNumber { get; set; }  // シリアル番号
+                private uint NetwrokNumber { get; set; } // ネットワーク番号
+                private uint PcNumber { get; set; }      // PC番号
+                private uint IoNumber { get; set; }      // 要求先ユニットI/O番号
+                private uint ChannelNumber { get; set; } // 要求先ユニット局番号
+                private uint CpuTimer { get; set; }      // CPU監視タイマ
+                private int ResultCode { get; set; }     // 終了コード
                 public byte[] Response { get; private set; }    // 応答データ
                 // ================================================================================
                 // コンストラクタ
                 public McCommand(McFrame iFrame)
                 {
-                    this.FrameType = iFrame;
-                    this.SerialNumber = 0x0001u;
-                    this.NetwrokNumber = 0x0000u;
-                    this.PCNumber = 0x00FFu;
-                    this.IONumber = 0x03FFu;
-                    this.ChannelNumber = 0x0000u;
-                    this.CpuTimer = 0x0010u;
+                    FrameType = iFrame;
+                    SerialNumber = 0x0001u;
+                    NetwrokNumber = 0x0000u;
+                    PcNumber = 0x00FFu;
+                    IoNumber = 0x03FFu;
+                    ChannelNumber = 0x0000u;
+                    CpuTimer = 0x0010u;
                 }
                 // ================================================================================
                 public byte[] SetCommand(uint iMainCommand, uint iSubCommand, byte[] iData)
                 {
-                    uint dataLength = (uint)(iData.Length + 6);
-                    List<byte> ret = new List<byte>(iData.Length + 20);
-                    uint frame = (this.FrameType == McFrame.MC3E) ? 0x0050u :
-                                 (this.FrameType == McFrame.MC4E) ? 0x0054u : 0x0000u;
+                    var dataLength = (uint)(iData.Length + 6);
+                    var ret = new List<byte>(iData.Length + 20);
+                    uint frame = (FrameType == McFrame.MC3E) ? 0x0050u :
+                                 (FrameType == McFrame.MC4E) ? 0x0054u : 0x0000u;
                     ret.Add((byte)frame);
                     ret.Add((byte)(frame >> 8));
-                    if (this.FrameType == McFrame.MC4E)
+                    if (FrameType == McFrame.MC4E)
                     {
-                        ret.Add((byte)this.SerialNumber);
-                        ret.Add((byte)(this.SerialNumber >> 8));
+                        ret.Add((byte)SerialNumber);
+                        ret.Add((byte)(SerialNumber >> 8));
                         ret.Add(0x00);
                         ret.Add(0x00);
                     }
-                    ret.Add((byte)this.NetwrokNumber);
-                    ret.Add((byte)this.PCNumber);
-                    ret.Add((byte)this.IONumber);
-                    ret.Add((byte)(this.IONumber >> 8));
-                    ret.Add((byte)this.ChannelNumber);
+                    ret.Add((byte)NetwrokNumber);
+                    ret.Add((byte)PcNumber);
+                    ret.Add((byte)IoNumber);
+                    ret.Add((byte)(IoNumber >> 8));
+                    ret.Add((byte)ChannelNumber);
                     ret.Add((byte)dataLength);
                     ret.Add((byte)(dataLength >> 8));
-                    ret.Add((byte)this.CpuTimer);
-                    ret.Add((byte)(this.CpuTimer >> 8));
+                    ret.Add((byte)CpuTimer);
+                    ret.Add((byte)(CpuTimer >> 8));
                     ret.Add((byte)iMainCommand);
                     ret.Add((byte)(iMainCommand >> 8));
                     ret.Add((byte)iSubCommand);
                     ret.Add((byte)(iSubCommand >> 8));
-                    for (int i = 0; i < iData.Length; ++i)
-                    {
-                        ret.Add(iData[i]);
-                    }
+                    ret.AddRange(iData);
                     return ret.ToArray();
                 }
                 // ================================================================================
                 public int SetResponse(byte[] iResponse)
                 {
-                    int min = (this.FrameType == McFrame.MC3E) ? 11 : 15;
+                    int min = (FrameType == McFrame.MC3E) ? 11 : 15;
                     if (min <= iResponse.Length)
                     {
-                        byte[] btCount = new byte[] { iResponse[min - 4], iResponse[min - 3] };
-                        byte[] btCode = new byte[] { iResponse[min - 2], iResponse[min - 1] };
+                        var btCount = new[] { iResponse[min - 4], iResponse[min - 3] };
+                        var btCode = new[] { iResponse[min - 2], iResponse[min - 1] };
                         int rsCount = BitConverter.ToUInt16(btCount, 0);
-                        this.ResultCode = BitConverter.ToUInt16(btCode, 0);
-                        this.Response = new byte[rsCount - 2];
-                        Buffer.BlockCopy(iResponse, min, this.Response, 0, this.Response.Length);
+                        ResultCode = BitConverter.ToUInt16(btCode, 0);
+                        Response = new byte[rsCount - 2];
+                        Buffer.BlockCopy(iResponse, min, Response, 0, Response.Length);
                     }
-                    return this.ResultCode;
+                    return ResultCode;
+                }
+                // ================================================================================
+                public bool IsIncorrectResponse(byte[] iResponse)
+                {
+                    var min = (FrameType == McFrame.MC3E) ? 11 : 15;
+                    var btCount = new[] { iResponse[min - 4], iResponse[min - 3] };
+                    var btCode  = new[] { iResponse[min - 2], iResponse[min - 1] };
+                    var rsCount = BitConverter.ToUInt16(btCount, 0) - 2;
+                    var rsCode  = BitConverter.ToUInt16(btCode, 0);
+                    return (rsCode == 0 && rsCount != (iResponse.Length - min));
                 }
             }
         }
@@ -567,29 +594,29 @@ namespace Nc
             public McProtocolTcp(string iHostName, int iPortNumber)
                 : base(iHostName, iPortNumber)
             {
-                this.Client = new TcpClient();
+                Client = new TcpClient();
             }
 
             // &&&&& protected &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
             override protected void DoConnect()
             {
-                TcpClient c = this.Client;
+                TcpClient c = Client;
                 if (!c.Connected)
                 {
                     // Keep Alive機能の実装
-                    List<byte> ka = new List<byte>(sizeof(uint) * 3);
+                    var ka = new List<byte>(sizeof(uint) * 3);
                     ka.AddRange(BitConverter.GetBytes(1u));
                     ka.AddRange(BitConverter.GetBytes(45000u));
                     ka.AddRange(BitConverter.GetBytes(5000u));
                     c.Client.IOControl(IOControlCode.KeepAliveValues, ka.ToArray(), null);
-                    c.Connect(this.HostName, this.PortNumber);
-                    this.Stream = c.GetStream();
+                    c.Connect(HostName, PortNumber);
+                    Stream = c.GetStream();
                 }
             }
             // ====================================================================================
             override protected void DoDisconnect()
             {
-                TcpClient c = this.Client;
+                TcpClient c = Client;
                 if (c.Connected)
                 {
                     c.Close();
@@ -598,13 +625,13 @@ namespace Nc
             // ================================================================================
             override protected byte[] Execute(byte[] iCommand)
             {
-                NetworkStream ns = this.Stream;
+                NetworkStream ns = Stream;
                 ns.Write(iCommand, 0, iCommand.Length);
                 ns.Flush();
 
-                using (MemoryStream ms = new MemoryStream())
+                using (var ms = new MemoryStream())
                 {
-                    byte[] buff = new byte[256];
+                    var buff = new byte[256];
                     do
                     {
                         int sz = ns.Read(buff, 0, buff.Length);
@@ -630,14 +657,14 @@ namespace Nc
             public McProtocolUdp(string iHostName, int iPortNumber)
                 : base(iHostName, iPortNumber)
             {
-                this.Client = new UdpClient(iPortNumber);
+                Client = new UdpClient(iPortNumber);
             }
 
             // &&&&& protected &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
             override protected void DoConnect()
             {
-                UdpClient c = this.Client;
-                c.Connect(this.HostName, this.PortNumber);
+                UdpClient c = Client;
+                c.Connect(HostName, PortNumber);
             }
             // ====================================================================================
             override protected void DoDisconnect()
@@ -647,19 +674,18 @@ namespace Nc
             // ================================================================================
             override protected byte[] Execute(byte[] iCommand)
             {
-                UdpClient c = this.Client;
+                UdpClient c = Client;
                 // 送信
                 c.Send(iCommand, iCommand.Length);
 
-                using (MemoryStream ms = new MemoryStream())
+                using (var ms = new MemoryStream())
                 {
-                    IPAddress ip = IPAddress.Parse(this.HostName);
-                    IPEndPoint ep = new IPEndPoint(ip, this.PortNumber);
-                    byte[] buff = new byte[256];
+                    IPAddress ip = IPAddress.Parse(HostName);
+                    var ep = new IPEndPoint(ip, PortNumber);
                     do
                     {
                         // 受信
-                        buff = c.Receive(ref ep);
+                        byte[] buff = c.Receive(ref ep);
                         ms.Write(buff, 0, buff.Length);
                     } while (0 < c.Available);
                     return ms.ToArray();
